@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZionAI - Your Academic Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>NFO:__main__:Loading tokenizer for google/gemma-2-2b-it
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): huggingface.co:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (2): huggingface.co:443
+ERROR:__main__:Error loading model or tokenizer: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.
+Checkout your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .typing-indicator {
+            display: flex;
+            padding: 8px;
+        }
+        .typing-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        .chat-container {
+            height: calc(100vh - 180px);
+        }
+        .message-animation {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+        .hide-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .ai-message {
+            background: white;
+            border-radius: 18px 18px 18px 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .user-message {
+            background: #3b82f6;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .suggestions-container {
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(5px);
+        }
+        .suggestion-chip {
+            transition: all 0.2s ease;
+        }
+        .suggestion-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .message-timestamp {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans transition-colors duration-200">
+    <div class="max-w-4xl mx-auto h-screen flex flex-col">
+        <!-- Header -->
+        <header class="gradient-bg text-white p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600">
+                            <i class="fas fa-brain text-xl"></i>
+                            <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">ZionAI</h1>
+                        <p class="text-xs opacity-90">Your academic companion</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-blue-700 transition">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="help-btn" class="p-2 rounded-full hover:bg-blue-700 transition">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                    <button id="new-chat-btn" class="p-2 rounded-full hover:bg-blue-700 transition" title="New chat">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Suggestions (shown when chat is empty) -->
+        <div id="suggestions-container" class="suggestions-container p-4 rounded-b-lg shadow-sm">
+            <h3 class="text-sm font-medium text-gray-500 mb-2">How can I help you today?</h3>
+            <div class="flex flex-wrap gap-2">
+                <button class="suggestion-chip bg-blue-50 text-blue-600 px-3 py-2 rounded-full text-sm">
+                    Explain quantum physics basics
+                </button>
+                <button class="suggestion-chip bg-green-50 text-green-600 px-3 py-2 rounded-full text-sm">
+                    Help me solve 2x + 5 = 15
+                </button>
+                <button class="suggestion-chip bg-purple-50 text-purple-600 px-3 py-2 rounded-full text-sm">
+                    Summarize World War II
+                </button>
+                <button class="suggestion-chip bg-yellow-50 text-yellow-600 px-3 py-2 rounded-full text-sm">
+                    What's the theme of Romeo & Juliet?
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div id="chat-container" class="chat-container overflow-y-auto p-4 space-y-4 flex-1 bg-gray-50">
+            <!-- Welcome Message -->
+            <div class="message-animation flex">
+                <div class="ai-message p-4 max-w-xs md:max-w-md lg:max-w-lg">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-2">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div>
+                            <span class="font-semibold">ZionAI</span>
+                            <span class="message-timestamp ml-2">Just now</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-800">Shalom! 🌟 I'm ZionAI, your intelligent study companion. I can help with:</p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1 text-gray-700">
+                        <li>Homework problems & explanations</li>
+                        <li>Concept breakdowns & summaries</li>
+                        <li>Practice questions & quizzes</li>
+                        <li>Research assistance & citations</li>
+                    </ul>
+                    <p class="mt-2 text-gray-800">What would you like to explore today?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 border-t border-gray-200 bg-white shadow-lg">
+            <div class="flex items-center space-x-2">
+                <div class="flex-1 relative">
+                    <input 
+                        id="user-input" 
+                        type="text" 
+                        placeholder="Message ZionAI..." 
+                        class="w-full p-3 pl-4 pr-12 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        autocomplete="off"
+                    >
+                    <button id="send-btn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-800 transition">
+                        <i class="fas fa-paper-plane text-xl"></i>
+                    </button>
+                </div>
+                <button id="mic-btn" class="p-3 rounded-full bg-gray-100 hover:bg-gray-200 text-blue-600 transition">
+                    <i class="fas fa-microphone"></i>
+                </button>
+            </div>
+            <div class="flex justify-between mt-2 text-xs text-gray-500 px-2">
+                <span>ZionAI may make mistakes always check *</span>
+                <span id="char-count">0/5000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-blue-600">About ZionAI</h3>
+                <button id="close-help-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    <div class="bg-blue-100 p-2 rounded-full mr-3">
+                        <i class="fas fa-lightbulb text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold">Knowledge Companion</h4>
+                        <p class="text-sm text-gray-600">ZionAI helps with math, science, literature, history, and more. Ask anything from basic concepts to advanced topics.</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="bg-blue-100 p-2 rounded-full mr-3">
+                        <i class="fas fa-book text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold">Study Tools</h4>
+                        <p class="text-sm text-gray-600">Request summaries, flashcards, or practice problems. Say "Quiz me on biology" or "Make flashcards for chemistry".</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="bg-blue-100 p-2 rounded-full mr-3">
+                        <i class="fas fa-code text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold">Coding Help</h4>
+                        <p class="text-sm text-gray-600">Get explanations for programming concepts, debug code, or learn algorithms in Python, Java, and more.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 bg-blue-50 p-3 rounded-lg">
+                <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-1"></i> ZionAI is designed for educational purposes. Verify critical information with authoritative sources.</p>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500">ZionAI v1.0 · Last updated today</p>
+            </div>
+        </div>
+    </div>
+<script>
+    // DOM Elements
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const micBtn = document.getElementById('mic-btn');
+    const charCount = document.getElementById('char-count');
+    const themeToggle = document.getElementById('theme-toggle');
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+    const closeHelpModal = document.getElementById('close-help-modal');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const suggestionChips = document.querySelectorAll('.suggestion-chip');
+
+    // Sample conversation starters
+    const suggestions = [
+        "Explain quantum physics basics",
+        "Help me solve 2x + 5 = 15",
+        "Summarize World War II",
+        "What's the theme of Romeo & Juliet?",
+        "Tell me about Zion's history",
+        "Create a study plan for finals"
+    ];
+
+    // Event Listeners
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+    micBtn.addEventListener('click', toggleVoiceInput);
+    themeToggle.addEventListener('click', toggleTheme);
+    helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
+    closeHelpModal.addEventListener('click', () => helpModal.classList.add('hidden'));
+    newChatBtn.addEventListener('click', startNewChat);
+    userInput.addEventListener('input', updateCharCount);
+    userInput.addEventListener('focus', () => suggestionsContainer.classList.add('hidden'));
+    userInput.addEventListener('blur', () => {
+        if (chatContainer.children.length <= 1) {
+            suggestionsContainer.classList.remove('hidden');
+        }
+    });
+    suggestionChips.forEach((chip, index) => {
+        chip.addEventListener('click', () => {
+            userInput.value = suggestions[index];
+            userInput.focus();
+            updateCharCount();
+        });
+    });
+
+    // Initialize
+    updateCharCount();
+
+    // Functions
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (message === '') return;
+
+        // Add user message to chat
+        addMessage(message, 'user');
+        userInput.value = '';
+        updateCharCount();
+        suggestionsContainer.classList.add('hidden');
+
+        // Show typing indicator
+        showTypingIndicator();
+
+        try {
+            // Send request to backend
+            const response = await fetch('http://localhost:5000/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+
+            // Remove typing indicator
+            removeTypingIndicator();
+
+            if (data.error) {
+                addMessage(`Error: ${data.error}`, 'ai');
+            } else {
+                addMessage(data.response, 'ai');
+            }
+        } catch (error) {
+            removeTypingIndicator();
+            addMessage(`Error: Failed to connect to the server. ${error.message}`, 'ai');
+        }
+        scrollToBottom();
+    }
+
+    function addMessage(message, sender) {
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('flex', 'message-animation');
+
+        if (sender === 'user') {
+            messageDiv.classList.add('justify-end');
+            messageDiv.innerHTML = `
+                <div class="user-message p-4 max-w-xs md:max-w-md lg:max-w-lg">
+                    <div class="flex justify-end items-center mb-1">
+                        <span class="message-timestamp mr-2">${timestamp}</span>
+                        <span class="font-medium">You</span>
+                    </div>
+                    <p>${message}</p>
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="ai-message p-4 max-w-xs md:max-w-md lg:max-w-lg">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-2">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <div>
+                            <span class="font-semibold">ZionAI</span>
+                            <span class="message-timestamp ml-2">${timestamp}</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-800">${message.replace(/\n/g, '<br>')}</p>
+                </div>
+            `;
+        }
+
+        chatContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('flex', 'message-animation');
+        typingDiv.id = 'typing-indicator';
+        typingDiv.innerHTML = `
+            <div class="ai-message p-4 max-w-xs md:max-w-md lg:max-w-lg">
+                <div class="flex items-center mb-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-2">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <span class="font-semibold">ZionAI</span>
+                        <span class="message-timestamp ml-2">typing...</span>
+                    </div>
+                </div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        `;
+        chatContainer.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
+    }
+
+    function toggleVoiceInput() {
+        micBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+        micBtn.classList.remove('bg-gray-100');
+        micBtn.classList.add('bg-red-100', 'text-red-600');
+
+        setTimeout(() => {
+            addMessage("Voice input isn't supported yet. Please type your question.", 'ai');
+            micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            micBtn.classList.remove('bg-red-100', 'text-red-600');
+            micBtn.classList.add('bg-gray-100');
+        }, 1500);
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('bg-gray-900');
+        document.body.classList.toggle('text-white');
+        document.body.classList.toggle('bg-gray-50');
+
+        document.querySelectorAll('.ai-message').forEach(el => {
+            el.classList.toggle('bg-gray-800');
+            el.classList.toggle('text-gray-100');
+            el.classList.toggle('bg-white');
+            el.classList.toggle('text-gray-800');
+        });
+
+        document.querySelector('.bg-white').classList.toggle('bg-gray-800');
+        document.querySelector('.bg-white').classList.toggle('border-gray-700');
+
+        const icon = themeToggle.querySelector('i');
+        if (document.body.classList.contains('bg-gray-900')) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+        } else {
+            icon.classList.remove('fa-sun');
+            icon.classList.add('fa-moon');
+        }
+    }
+
+    function startNewChat() {
+        if (chatContainer.children.length > 1) {
+            if (confirm('Start a new conversation? Your current chat will be cleared.')) {
+                while (chatContainer.children.length > 1) {
+                    chatContainer.removeChild(chatContainer.lastChild);
+                }
+                suggestionsContainer.classList.remove('hidden');
+                scrollToBottom();
+            }
+        }
+    }
+
+    function updateCharCount() {
+        const count = userInput.value.length;
+        charCount.textContent = `${count}/5000`;
+        if (count >= 450) {
+            charCount.classList.add('text-red-500');
+        } else {
+            charCount.classList.remove('text-red-500');
+        }
+    }
+
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+</script>
+</body>
+</html>
